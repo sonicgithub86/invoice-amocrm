@@ -6,7 +6,10 @@ namespace InvoiceService\Http;
 
 final class Application
 {
-    public function __construct(private readonly ?OAuthController $oauth = null)
+    public function __construct(
+        private readonly ?OAuthController $oauth = null,
+        private readonly ?WebhookController $webhooks = null,
+    )
     {
     }
 
@@ -22,6 +25,10 @@ final class Application
 
         if ($this->oauth !== null && $request->method === 'GET' && $request->path === '/oauth/callback') {
             return $this->oauth->callback($request);
+        }
+
+        if ($this->webhooks !== null && $request->method === 'POST' && preg_match('#^/webhooks/([0-9a-f-]{36})/([A-Za-z0-9_-]{16,})$#', $request->path, $matches) === 1) {
+            return $this->webhooks->receive($request, $matches[1], $matches[2]);
         }
 
         return Response::json(404, ['error' => 'not_found']);

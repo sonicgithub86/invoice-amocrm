@@ -7,4 +7,6 @@ namespace InvoiceService\Services;
 interface WebhookEndpointRepository
 {
     public function replace(int $accountId, string $triggerKind, string $endpointId, string $secretHash): void;
+
+    public function findEnabled(string $endpointId): ?WebhookEndpointRecord;
 }

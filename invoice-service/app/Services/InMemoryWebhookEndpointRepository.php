@@ -6,16 +6,17 @@ namespace InvoiceService\Services;
 
 final class InMemoryWebhookEndpointRepository implements WebhookEndpointRepository
 {
-    /** @var array<string, array{account_id: int, trigger_kind: string, secret_hash: string}> */
+    /** @var array<string, WebhookEndpointRecord> */
     private array $records = [];
 
     public function replace(int $accountId, string $triggerKind, string $endpointId, string $secretHash): void
     {
-        $this->records[$endpointId] = [
-            'account_id' => $accountId,
-            'trigger_kind' => $triggerKind,
-            'secret_hash' => $secretHash,
-        ];
+        $this->records[$endpointId] = new WebhookEndpointRecord($endpointId, $accountId, $triggerKind, $secretHash);
+    }
+
+    public function findEnabled(string $endpointId): ?WebhookEndpointRecord
+    {
+        return $this->records[$endpointId] ?? null;
     }
 
     public function count(): int
@@ -26,7 +27,7 @@ final class InMemoryWebhookEndpointRepository implements WebhookEndpointReposito
     public function containsRawSecret(string $secret): bool
     {
         foreach ($this->records as $record) {
-            if (hash_equals($record['secret_hash'], $secret)) {
+            if (hash_equals($record->secretHash, $secret)) {
                 return true;
             }
         }

@@ -13,18 +13,24 @@ use InvoiceService\Http\Request;
 use InvoiceService\OAuth\OAuthStateService;
 use InvoiceService\OAuth\PdoOAuthStateRepository;
 use InvoiceService\Security\CredentialCipher;
+use InvoiceService\Jobs\PdoInvoiceJobRepository;
 use InvoiceService\Services\PdoWebhookEndpointRepository;
+use InvoiceService\Services\WebhookCapabilityValidator;
 use InvoiceService\Services\WebhookEndpointService;
+use InvoiceService\Http\WebhookController;
+use InvoiceService\Http\WebhookPayloadExtractor;
 
 $config = require dirname(__DIR__) . '/config/bootstrap.php';
 $connection = ConnectionFactory::fromConfig($config);
 $stateService = new OAuthStateService(new PdoOAuthStateRepository($connection));
 $gateway = new OfficialOAuthGateway($config->amoClientId(), $config->amoClientSecret(), $config->baseUrl() . '/oauth/callback');
-$webhookEndpoints = new WebhookEndpointService(new PdoWebhookEndpointRepository($connection), $config->baseUrl());
+$webhookEndpointRepository = new PdoWebhookEndpointRepository($connection);
+$webhookEndpoints = new WebhookEndpointService($webhookEndpointRepository, $config->baseUrl());
 $accountService = new OAuthAccountService($gateway, new PdoAccountRepository($connection, new CredentialCipher([1 => $config->credentialKey()])), $webhookEndpoints);
 $oauth = new OAuthController(new OperatorAuthenticator($config->operatorAccessToken()), $stateService, $gateway, $accountService);
 
-$response = (new Application($oauth))->handle(Request::fromGlobals());
+$webhooks = new WebhookController(new WebhookCapabilityValidator($webhookEndpointRepository), new WebhookPayloadExtractor(), new PdoInvoiceJobRepository($connection));
+$response = (new Application($oauth, $webhooks))->handle(Request::fromGlobals());
 http_response_code($response['status']);
 foreach ($response->headers as $name => $value) {
     header($name . ': ' . $value);

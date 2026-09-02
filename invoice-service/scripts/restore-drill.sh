@@ -41,10 +41,21 @@ docker run -d \
     postgres:16-alpine >/dev/null
 
 ready=false
-for _ in $(seq 1 30); do
-    if docker exec "$db_container" sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
-        ready=true
-        break
+stable_ready_count=0
+for _ in $(seq 1 60); do
+    if docker exec "$db_container" sh -c '
+        test "$(cat /proc/1/comm)" = postgres \
+            && pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+            && psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --tuples-only --no-align --command="SELECT 1" \
+                | grep -qx 1
+    ' >/dev/null 2>&1; then
+        ((stable_ready_count += 1))
+        if ((stable_ready_count >= 3)); then
+            ready=true
+            break
+        fi
+    else
+        stable_ready_count=0
     fi
     sleep 1
 done

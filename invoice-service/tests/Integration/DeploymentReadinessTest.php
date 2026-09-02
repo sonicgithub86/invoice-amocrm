@@ -103,6 +103,11 @@ final class DeploymentReadinessTest extends TestCase
         self::assertIsString($rollback);
         self::assertStringContainsString('INVOICE_TRIGGER_DISABLED', $rollback);
         self::assertStringContainsString('docker volume inspect invoice-service-postgres invoice-service-documents', $rollback);
+
+        $restoreDrill = file_get_contents($root . '/scripts/restore-drill.sh');
+        self::assertIsString($restoreDrill);
+        self::assertStringContainsString('stable_ready_count', $restoreDrill);
+        self::assertStringContainsString('SELECT 1', $restoreDrill);
     }
 
     public function testReadinessCommandChecksDatabaseMigrationsStorageAndRendererBinaries(): void

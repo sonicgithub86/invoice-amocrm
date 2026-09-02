@@ -1,0 +1,49 @@
+services:
+  web:
+    build: .
+    env_file:
+      - ./deploy/invoice-service.env
+    command: apache2-foreground
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:18080:80"
+    restart: unless-stopped
+    networks:
+      - internal
+
+  worker:
+    build: .
+    env_file:
+      - ./deploy/invoice-service.env
+    command: ["php", "bin/console", "work-invoices"]
+    user: "33:33"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal
+
+  db:
+    image: postgres:16-alpine
+    env_file:
+      - ./deploy/invoice-service.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invoice_service -d invoice_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    volumes:
+      - invoice-service-postgres:/var/lib/postgresql/data
+    networks:
+      - internal
+
+volumes:
+  invoice-service-postgres:
+
+networks:
+  internal:
+    internal: true

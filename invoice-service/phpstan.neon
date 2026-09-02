@@ -1,0 +1,8 @@
+parameters:
+  level: 6
+  paths:
+    - app
+    - bin
+    - config
+    - database
+  tmpDir: .phpstan.cache

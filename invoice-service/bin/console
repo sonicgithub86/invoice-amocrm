@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use InvoiceService\Database\ConnectionFactory;
+use InvoiceService\Database\Migrator;
+
+$config = require dirname(__DIR__) . '/config/bootstrap.php';
+
+if (($argv[1] ?? '') === 'migrate') {
+    (new Migrator(ConnectionFactory::fromConfig($config)))->migrate();
+    fwrite(STDOUT, "Migrations complete.\n");
+    exit(0);
+}
+
+fwrite(STDERR, "Usage: bin/console migrate\n");
+exit(1);

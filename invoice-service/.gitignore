@@ -1,0 +1,6 @@
+/.env
+/deploy/invoice-service.env
+/vendor/
+/.phpunit.cache/
+/.phpstan.cache/
+/var/

@@ -1,0 +1,14 @@
+services:
+  web:
+    build:
+      context: .
+    ports:
+      - "127.0.0.1:18080:80"
+
+  worker:
+    build:
+      context: .
+
+  refresher:
+    build:
+      context: .

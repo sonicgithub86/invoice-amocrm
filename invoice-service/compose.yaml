@@ -1,45 +1,114 @@
+name: invoice-service
+
+x-app-service: &app-service
+  image: ${INVOICE_SERVICE_IMAGE:-invoice-service:local}
+  env_file:
+    - ${INVOICE_SERVICE_ENV_FILE:-./deploy/invoice-service.env}
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
   web:
-    build: .
-    env_file:
-      - ./deploy/invoice-service.env
+    <<: *app-service
+    container_name: invoice-service-web
     command: apache2-foreground
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:18080:80"
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "php", "-r", "$$body=@file_get_contents('http://127.0.0.1/healthz'); exit($$body===false?1:0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    mem_limit: 192m
+    cpus: 0.50
+    pids_limit: 128
     networks:
       - egress
       - database
 
   worker:
-    build: .
-    env_file:
-      - ./deploy/invoice-service.env
+    <<: *app-service
+    container_name: invoice-service-worker
     command: ["php", "bin/console", "work-invoices"]
     user: "33:33"
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "for process in /proc/[0-9]*/cmdline; do grep -aq 'work-invoices' \"$${process}\" && exit 0; done; exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    mem_limit: 640m
+    cpus: 1.00
+    pids_limit: 256
     volumes:
       - invoice-service-documents:/var/lib/invoice-service/documents
     networks:
       - egress
       - database
 
+  refresher:
+    <<: *app-service
+    container_name: invoice-service-refresher
+    command:
+      - sh
+      - -ec
+      - |
+        while true; do
+          php bin/console refresh-oauth
+          sleep "$${OAUTH_REFRESH_INTERVAL_SECONDS:-300}"
+        done
+    user: "33:33"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "for process in /proc/[0-9]*/cmdline; do grep -aq 'refresh-oauth' \"$${process}\" && exit 0; done; exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 64
+    networks:
+      - egress
+      - database
+
   db:
     image: postgres:16-alpine
+    container_name: invoice-service-db
     env_file:
-      - ./deploy/postgres.env
+      - ${POSTGRES_ENV_FILE:-./deploy/postgres.env}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U invoice_service -d invoice_service"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 5s
       retries: 12
+      start_period: 10s
+    init: true
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 384m
+    cpus: 0.50
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - invoice-service-postgres:/var/lib/postgresql/data
     networks:
@@ -47,9 +116,13 @@ services:
 
 volumes:
   invoice-service-postgres:
+    name: invoice-service-postgres
   invoice-service-documents:
+    name: invoice-service-documents
 
 networks:
   egress:
+    name: invoice-service-egress
   database:
+    name: invoice-service-database
     internal: true

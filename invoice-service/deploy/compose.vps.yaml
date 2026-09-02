@@ -1,0 +1,18 @@
+services:
+  web:
+    image: ${INVOICE_SERVICE_IMAGE:?Set INVOICE_SERVICE_IMAGE to an immutable release tag or digest}
+    networks:
+      invoice-edge:
+        aliases:
+          - invoice-service-web
+
+  worker:
+    image: ${INVOICE_SERVICE_IMAGE:?Set INVOICE_SERVICE_IMAGE to an immutable release tag or digest}
+
+  refresher:
+    image: ${INVOICE_SERVICE_IMAGE:?Set INVOICE_SERVICE_IMAGE to an immutable release tag or digest}
+
+networks:
+  invoice-edge:
+    name: invoice-edge
+    external: true

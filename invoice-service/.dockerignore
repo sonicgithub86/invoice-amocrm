@@ -1,6 +1,13 @@
-.env
-vendor
 .git
-.phpunit.cache
+.gitignore
 .phpstan.cache
-var
+.phpunit.cache
+vendor
+tests
+docs
+deploy/*.env
+deploy/evidence
+backups
+*.log
+*.pdf
+*.docx

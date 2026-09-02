@@ -14,12 +14,12 @@ The company requisite IDs already created in the account are built into the serv
 
 ## First deployment and OAuth connection
 
-1. Start the service: `docker compose up --build -d db web worker`.
-2. Apply schema: `docker compose exec web php bin/console migrate`.
-3. Obtain an OAuth URL from the VPS shell: `docker compose exec web php bin/console oauth-url`.
+1. Complete the closed-stack deployment and internal verification in `OPERATIONS.md` before adding any amoCRM webhook.
+2. Apply schema using the fixed project and production overlay as documented there.
+3. Obtain an OAuth URL from the VPS shell: `docker compose -f compose.yaml -f deploy/compose.vps.yaml exec web php bin/console oauth-url`.
 4. Open the printed URL in a browser, approve access for the amoCRM account, then return to the callback page. It returns the two unique pipeline URLs once: `automatic` and `rerun`. Save them in a password manager until configured.
 
-OAuth access and refresh tokens are encrypted in PostgreSQL with `AMO_CREDENTIAL_KEY_V1`; the key itself is not stored in the database. Run `docker compose exec worker php bin/console refresh-oauth` from the VPS scheduler before tokens expire; the amoCRM client also persists a token refresh performed during an API call.
+OAuth access and refresh tokens are encrypted in PostgreSQL with `AMO_CREDENTIAL_KEY_V1`; the key itself is not stored in the database. The isolated `refresher` container runs `refresh-oauth` periodically and restarts on a failed refresh attempt; the amoCRM client also persists a token refresh performed during an API call.
 
 ## Digital Pipeline
 
@@ -42,7 +42,7 @@ Every URL contains a random, account-bound secret. Do not place it in public doc
 ## Routine checks
 
 - Health: `curl -fsS https://your-subdomain.example/healthz`
-- Logs: `docker compose logs -f web worker`
+- Logs: `docker compose -f compose.yaml -f deploy/compose.vps.yaml logs -f web worker refresher`
 - Static checks before deployment: `composer qa`
 
-Never use a root workspace `.env` for this service. Compose reads `deploy/invoice-service.env` for the web and worker containers and `deploy/postgres.env` for PostgreSQL.
+Never use a root workspace `.env` for this service. Compose reads the owner-only application and PostgreSQL environment files selected by `INVOICE_SERVICE_ENV_FILE` and `POSTGRES_ENV_FILE`.

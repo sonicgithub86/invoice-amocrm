@@ -23,7 +23,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "php", "-r", "$$body=@file_get_contents('http://127.0.0.1/healthz'); exit($$body===false?1:0);"]
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/healthz')===false?1:0);"]
       interval: 10s
       timeout: 5s
       retries: 6

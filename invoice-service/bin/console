@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 use InvoiceService\Database\ConnectionFactory;
 use InvoiceService\Database\Migrator;
+use InvoiceService\Database\MigrationCatalog;
 use InvoiceService\AmoCRM\OAuthTokenRefresher;
 use InvoiceService\AmoCRM\OfficialOAuthGateway;
 use InvoiceService\AmoCRM\AmoRequestPacer;
@@ -30,6 +31,33 @@ $config = require dirname(__DIR__) . '/config/bootstrap.php';
 if ($command === 'migrate') {
     (new Migrator(ConnectionFactory::fromConfig($config)))->migrate();
     fwrite(STDOUT, "Migrations complete.\n");
+    exit(0);
+}
+
+if ($command === 'readiness') {
+    $connection = ConnectionFactory::fromConfig($config);
+    if ((string) $connection->query('SELECT 1')->fetchColumn() !== '1') {
+        throw new RuntimeException('Database connectivity check failed.');
+    }
+
+    $applied = $connection->query('SELECT version FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN);
+    $missing = array_values(array_diff(array_keys(MigrationCatalog::all()), $applied));
+    if ($missing !== []) {
+        throw new RuntimeException('Database migrations are incomplete: ' . implode(', ', $missing));
+    }
+
+    $documentsDirectory = getenv('INVOICE_DOCUMENTS_DIRECTORY') ?: '/var/lib/invoice-service/documents';
+    if (!is_dir($documentsDirectory) || !is_writable($documentsDirectory)) {
+        throw new RuntimeException('Invoice document storage is not writable.');
+    }
+
+    foreach (['/usr/bin/soffice', '/usr/bin/pdfinfo'] as $binary) {
+        if (!is_executable($binary)) {
+            throw new RuntimeException(sprintf('Required renderer binary is unavailable: %s', basename($binary)));
+        }
+    }
+
+    fwrite(STDOUT, "Readiness: PASS\n");
     exit(0);
 }
 
@@ -73,5 +101,5 @@ if ($command === 'work-invoices') {
     }
 }
 
-fwrite(STDERR, "Usage: bin/console migrate|refresh-oauth|oauth-url|work-invoices\n");
+fwrite(STDERR, "Usage: bin/console migrate|readiness|refresh-oauth|oauth-url|work-invoices\n");
 exit(1);

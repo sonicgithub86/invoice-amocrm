@@ -27,4 +27,25 @@ final class InvoiceJobRepositoryTest extends TestCase
         $repository->markCompleted($leased);
         self::assertTrue($repository->enqueue($endpoint, 28457194, hash('sha256', 'new-payload'))->created);
     }
+
+    public function testReclaimedJobCannotBeCompletedOrRetriedByPreviousLeaseOwner(): void
+    {
+        $repository = new InMemoryInvoiceJobRepository();
+        $endpoint = new WebhookEndpointRecord('6f4045e5-01d0-4a31-aaf4-69a907f0975f', 7, 'automatic', hash('sha256', 'secret'));
+        $repository->enqueue($endpoint, 28457194, hash('sha256', 'payload'));
+        $firstLeaseAt = new DateTimeImmutable('2026-09-02T12:00:00+00:00');
+        $reclaimedAt = $firstLeaseAt->add(new DateInterval('PT1M'));
+
+        $firstLease = $repository->leaseNext('worker-1', $firstLeaseAt, new DateInterval('PT1M'));
+        $secondLease = $repository->leaseNext('worker-2', $reclaimedAt, new DateInterval('PT1M'));
+
+        self::assertNotNull($firstLease);
+        self::assertNotNull($secondLease);
+        self::assertSame('worker-1', $firstLease->leaseOwner);
+        self::assertSame('worker-2', $secondLease->leaseOwner);
+        $repository->markCompleted($firstLease);
+        $repository->markRetryable($firstLease, $reclaimedAt);
+
+        self::assertNull($repository->leaseNext('worker-3', $reclaimedAt, new DateInterval('PT1M')));
+    }
 }

@@ -14,6 +14,7 @@ final class OfficialOAuthGateway implements OAuthGateway
         private readonly string $clientId,
         private readonly string $clientSecret,
         private readonly string $redirectUri,
+        private readonly AmoRequestPacer $pacer,
     ) {
     }
 
@@ -25,11 +26,13 @@ final class OfficialOAuthGateway implements OAuthGateway
     public function exchangeAuthorizationCode(string $code, string $baseDomain): ConnectedAccount
     {
         $client = $this->client($baseDomain);
+        $this->pacer->beforeRequest();
         $accessToken = $client->getOAuthClient()->getAccessTokenByCode($code);
         if (!$accessToken instanceof AccessToken) {
             throw new \RuntimeException('amoCRM OAuth client returned an unsupported access-token type.');
         }
         $client->setAccessToken($accessToken);
+        $this->pacer->beforeRequest();
         $account = $client->account()->getCurrent();
 
         return new ConnectedAccount(
@@ -42,6 +45,7 @@ final class OfficialOAuthGateway implements OAuthGateway
     public function refresh(OAuthToken $token, string $baseDomain): OAuthToken
     {
         $client = $this->client($baseDomain);
+        $this->pacer->beforeRequest();
         $refreshed = $client->getOAuthClient()->getAccessTokenByRefreshToken(new AccessToken([
             'access_token' => $token->accessToken,
             'refresh_token' => $token->refreshToken,

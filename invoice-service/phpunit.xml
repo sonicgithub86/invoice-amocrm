@@ -6,6 +6,7 @@
       <directory>tests/AmoCRM</directory>
       <directory>tests/Http</directory>
       <directory>tests/Jobs</directory>
+      <directory>tests/Revisions</directory>
       <directory>tests/OAuth</directory>
       <directory>tests/Security</directory>
       <directory>tests/Services</directory>

@@ -17,7 +17,7 @@ final class InvoiceSourceValidatorTest extends TestCase
     public function testKppIsOptionalButAllOtherCompanyRequisitesAndLicenceRowsAreRequired(): void
     {
         $validator = new InvoiceSourceValidator();
-        $eligible = new InvoiceSource(1, 28457194, $this->buyer(kpp: ''), [
+        $eligible = new InvoiceSource(1, 28457194, $this->buyer(kpp: '', inn: '500100732259', ogrn: '304500116000157'), [
             new DealProduct('Лицензия amoCRM', Money::fromDecimal('1990.00'), 2, true),
             new DealProduct('Настройка CRM', Money::fromDecimal('10000.00'), 1, false),
         ], 'seller-v1');
@@ -43,6 +43,20 @@ final class InvoiceSourceValidatorTest extends TestCase
         self::assertStringContainsString('Лицензия amoCRM', $result->reasons[1]);
     }
 
+    public function testRequiresKppForLegalEntityAndRejectsMalformedBankRequisites(): void
+    {
+        $buyer = $this->buyer(kpp: '', settlementAccount: '4070281000000000000X');
+        $source = new InvoiceSource(1, 28457194, $buyer, [
+            new DealProduct('Лицензия amoCRM', Money::fromDecimal('1990.00'), 1, true),
+        ], 'seller-v1');
+
+        $result = (new InvoiceSourceValidator())->validate($source);
+
+        self::assertFalse($result->eligible);
+        self::assertContains('Некорректно заполнено поле компании: КПП (обязательно для юридического лица).', $result->reasons);
+        self::assertContains('Некорректно заполнено поле компании: Расчётный счёт (требуется 20 цифр).', $result->reasons);
+    }
+
     public function testCanonicalSnapshotChangesOnlyWhenInvoiceSourceChanges(): void
     {
         $validator = new InvoiceSourceValidator();
@@ -60,15 +74,20 @@ final class InvoiceSourceValidatorTest extends TestCase
         self::assertNotSame(InvoiceSnapshot::fromSource($first, $validator)->hash(), InvoiceSnapshot::fromSource($changed, $validator)->hash());
     }
 
-    private function buyer(string $kpp = '123456789'): BuyerRequisites
+    private function buyer(
+        string $kpp = '123456789',
+        string $inn = '7701000000',
+        string $ogrn = '1027700000000',
+        string $settlementAccount = '40702810000000000001',
+    ): BuyerRequisites
     {
         return new BuyerRequisites(
             'ООО Покупатель',
-            '7701000000',
+            $inn,
             $kpp,
-            '1027700000000',
+            $ogrn,
             'г. Москва, ул. Пример, 1',
-            '40702810000000000001',
+            $settlementAccount,
             'АО Банк',
             '30101810000000000001',
             '044525000',

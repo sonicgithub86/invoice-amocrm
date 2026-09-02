@@ -45,7 +45,8 @@ CREATE TABLE deal_invoice_states (
     account_id bigint NOT NULL REFERENCES amocrm_accounts(id),
     lead_id bigint NOT NULL,
     current_revision_id uuid,
-    state varchar(32) NOT NULL DEFAULT 'no_invoice',
+    state varchar(32) NOT NULL DEFAULT 'no_invoice' CHECK (state IN ('no_invoice', 'rendering', 'current', 'validation_blocked', 'manual_reconciliation_required')),
+    validation_hash char(64),
     updated_at timestamptz NOT NULL DEFAULT now(),
     UNIQUE(account_id, lead_id)
 )
@@ -69,6 +70,7 @@ CREATE TABLE invoice_jobs (
     locked_until timestamptz,
     attempts integer NOT NULL DEFAULT 0,
     retry_at timestamptz,
+    failure_reason text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 )
@@ -84,10 +86,14 @@ CREATE TABLE invoice_revisions (
     account_id bigint NOT NULL REFERENCES amocrm_accounts(id),
     lead_id bigint NOT NULL,
     snapshot_hash char(64) NOT NULL,
+    snapshot jsonb NOT NULL,
     sequence_value bigint NOT NULL CHECK (sequence_value > 0),
     invoice_number varchar(128) NOT NULL,
-    status varchar(64) NOT NULL DEFAULT 'reserved',
+    status varchar(64) NOT NULL DEFAULT 'reserved' CHECK (status IN ('reserved', 'rendered', 'uploading', 'uploaded', 'attaching', 'attached', 'noting', 'completed', 'manual_reconciliation_required')),
     file_uuid uuid,
+    docx_path text,
+    pdf_path text,
+    pdf_sha256 char(64),
     attached_at timestamptz,
     note_marker varchar(255),
     noted_at timestamptz,

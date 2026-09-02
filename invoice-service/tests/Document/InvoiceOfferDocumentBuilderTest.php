@@ -24,7 +24,7 @@ final class InvoiceOfferDocumentBuilderTest extends TestCase
     {
         $profile = InvoiceOfferProfile::sonicIpV1();
         $source = new InvoiceSource(1, 28457194, new BuyerRequisites(
-            'ООО Покупатель', '7701000000', '', '1027700000000', 'г. Москва, ул. Пример, 1',
+            'ООО Покупатель', '7701000000', '123456789', '1027700000000', 'г. Москва, ул. Пример, 1',
             '40702810000000000001', 'АО Банк', '30101810000000000001', '044525000',
         ), [
             new DealProduct('Лицензия amoCRM Расширенный', Money::fromDecimal('1990.00'), 2, true),

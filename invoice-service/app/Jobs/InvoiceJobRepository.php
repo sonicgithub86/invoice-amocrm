@@ -17,4 +17,6 @@ interface InvoiceJobRepository
     public function markCompleted(InvoiceJob $job): void;
 
     public function markRetryable(InvoiceJob $job, DateTimeImmutable $retryAt): void;
+
+    public function markFailed(InvoiceJob $job, string $reason): void;
 }

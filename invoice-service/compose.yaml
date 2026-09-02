@@ -11,7 +11,8 @@ services:
       - "127.0.0.1:18080:80"
     restart: unless-stopped
     networks:
-      - internal
+      - egress
+      - database
 
   worker:
     build: .
@@ -23,13 +24,16 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - invoice-service-documents:/var/lib/invoice-service/documents
     networks:
-      - internal
+      - egress
+      - database
 
   db:
     image: postgres:16-alpine
     env_file:
-      - ./deploy/invoice-service.env
+      - ./deploy/postgres.env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U invoice_service -d invoice_service"]
       interval: 5s
@@ -39,11 +43,13 @@ services:
     volumes:
       - invoice-service-postgres:/var/lib/postgresql/data
     networks:
-      - internal
+      - database
 
 volumes:
   invoice-service-postgres:
+  invoice-service-documents:
 
 networks:
-  internal:
+  egress:
+  database:
     internal: true

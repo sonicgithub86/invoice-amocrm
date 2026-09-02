@@ -19,6 +19,8 @@ final readonly class InvoiceJob
         public ?DateTimeImmutable $lockedUntil = null,
         public int $attempts = 0,
         public ?DateTimeImmutable $retryAt = null,
+        public ?string $leaseOwner = null,
+        public ?string $failureReason = null,
     ) {
     }
 }

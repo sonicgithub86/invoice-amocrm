@@ -22,11 +22,26 @@ final class WebhookPayloadExtractor
                 return $candidate;
             }
 
-            if (is_string($candidate) && ctype_digit($candidate) && (int) $candidate > 0) {
+            if (is_string($candidate) && $this->isPositiveIntString($candidate)) {
                 return (int) $candidate;
             }
         }
 
         throw new WebhookPayloadInvalid('Webhook did not contain a valid lead ID.');
+    }
+
+    private function isPositiveIntString(string $value): bool
+    {
+        if (!ctype_digit($value)) {
+            return false;
+        }
+        $normalized = ltrim($value, '0');
+        if ($normalized === '') {
+            return false;
+        }
+        $maximum = (string) PHP_INT_MAX;
+
+        return strlen($normalized) < strlen($maximum)
+            || (strlen($normalized) === strlen($maximum) && strcmp($normalized, $maximum) <= 0);
     }
 }

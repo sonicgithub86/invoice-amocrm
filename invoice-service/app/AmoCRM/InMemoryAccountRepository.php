@@ -23,9 +23,12 @@ final class InMemoryAccountRepository implements AccountRepository
 
     public function markReauthorizationRequired(int $accountId): void
     {
-        $record = $this->accounts[$accountId] ?? null;
-        if ($record !== null) {
-            $this->accounts[$accountId] = new AccountRecord($record->id, $record->amoAccountId, $record->baseDomain, $record->token, 'reauthorization_required');
+        foreach ($this->accounts as $amoAccountId => $record) {
+            if ($record->id === $accountId) {
+                $this->accounts[$amoAccountId] = new AccountRecord($record->id, $record->amoAccountId, $record->baseDomain, $record->token, 'reauthorization_required');
+
+                return;
+            }
         }
     }
 

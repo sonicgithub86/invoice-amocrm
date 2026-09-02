@@ -15,6 +15,10 @@ final class Application
 
     public function handle(Request $request): Response
     {
+        if ($request->bodyTooLarge) {
+            return Response::json(413, ['error' => 'payload_too_large']);
+        }
+
         if ($request->method === 'GET' && $request->path === '/healthz') {
             return Response::json(200, ['status' => 'ok']);
         }

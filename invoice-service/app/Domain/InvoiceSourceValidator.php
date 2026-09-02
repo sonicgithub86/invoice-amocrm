@@ -21,6 +21,9 @@ final class InvoiceSourceValidator
             foreach ($source->buyer->missingFields() as $field) {
                 $reasons[] = 'Не заполнено поле компании: ' . $field . '.';
             }
+            foreach ($source->buyer->invalidFields() as $field) {
+                $reasons[] = 'Некорректно заполнено поле компании: ' . $field . '.';
+            }
         }
 
         if ($this->licenseProducts($source) === []) {

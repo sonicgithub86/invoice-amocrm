@@ -7,8 +7,21 @@ use InvoiceService\Database\ConnectionFactory;
 use InvoiceService\Database\Migrator;
 use InvoiceService\AmoCRM\OAuthTokenRefresher;
 use InvoiceService\AmoCRM\OfficialOAuthGateway;
+use InvoiceService\AmoCRM\AmoRequestPacer;
 use InvoiceService\AmoCRM\PdoAccountRepository;
 use InvoiceService\Security\CredentialCipher;
+use InvoiceService\Config\InvoiceSourceFieldMap;
+use InvoiceService\AmoCRM\AmoClientFactory;
+use InvoiceService\AmoCRM\OfficialInvoicePublisher;
+use InvoiceService\AmoCRM\OfficialInvoiceSourceReader;
+use InvoiceService\Documents\InvoiceOfferDocumentBuilder;
+use InvoiceService\Documents\InvoiceOfferProfile;
+use InvoiceService\Documents\InvoicePdfRenderer;
+use InvoiceService\Jobs\InvoiceJobWorker;
+use InvoiceService\Jobs\PdoInvoiceJobRepository;
+use InvoiceService\Revisions\PdoInvoiceRevisionRepository;
+use InvoiceService\Services\InvoiceGenerationService;
+use InvoiceService\Domain\InvoiceSourceValidator;
 
 $command = $argv[1] ?? '';
 
@@ -23,11 +36,42 @@ if ($command === 'migrate') {
 if ($command === 'refresh-oauth') {
     $connection = ConnectionFactory::fromConfig($config);
     $accounts = new PdoAccountRepository($connection, new CredentialCipher([1 => $config->credentialKey()]));
-    $gateway = new OfficialOAuthGateway($config->amoClientId(), $config->amoClientSecret(), $config->baseUrl() . '/oauth/callback');
+    $gateway = new OfficialOAuthGateway($config->amoClientId(), $config->amoClientSecret(), $config->baseUrl() . '/oauth/callback', new AmoRequestPacer());
     $updated = (new OAuthTokenRefresher($accounts, $gateway))->refreshDue(new DateTimeImmutable('+5 minutes'));
     fwrite(STDOUT, sprintf("Refreshed %d OAuth token(s).\n", count($updated)));
     exit(0);
 }
 
-fwrite(STDERR, "Usage: bin/console migrate|refresh-oauth\n");
+if ($command === 'oauth-url') {
+    $connection = ConnectionFactory::fromConfig($config);
+    $gateway = new OfficialOAuthGateway($config->amoClientId(), $config->amoClientSecret(), $config->baseUrl() . '/oauth/callback', new AmoRequestPacer());
+    fwrite(STDOUT, $gateway->authorizationUrl((new \InvoiceService\OAuth\OAuthStateService(new \InvoiceService\OAuth\PdoOAuthStateRepository($connection)))->issue()) . "\n");
+    exit(0);
+}
+
+if ($command === 'work-invoices') {
+    $connection = ConnectionFactory::fromConfig($config);
+    $accounts = new PdoAccountRepository($connection, new CredentialCipher([1 => $config->credentialKey()]));
+    $clients = new AmoClientFactory($config, $accounts);
+    $pacer = new AmoRequestPacer();
+    $profile = InvoiceOfferProfile::sonicIpV1();
+    $documentsDirectory = getenv('INVOICE_DOCUMENTS_DIRECTORY') ?: '/var/lib/invoice-service/documents';
+    $processor = new InvoiceGenerationService(
+        $accounts,
+        new OfficialInvoiceSourceReader($clients, InvoiceSourceFieldMap::fromEnvironment(), $profile, $pacer),
+        new InvoiceSourceValidator(),
+        new PdoInvoiceRevisionRepository($connection),
+        new InvoicePdfRenderer(new InvoiceOfferDocumentBuilder(), $documentsDirectory),
+        $profile,
+        new OfficialInvoicePublisher($clients, $pacer),
+    );
+    $worker = InvoiceJobWorker::withGeneratedId(new PdoInvoiceJobRepository($connection), $processor);
+    while (true) {
+        if (!$worker->runOnce()) {
+            usleep(1_000_000);
+        }
+    }
+}
+
+fwrite(STDERR, "Usage: bin/console migrate|refresh-oauth|oauth-url|work-invoices\n");
 exit(1);

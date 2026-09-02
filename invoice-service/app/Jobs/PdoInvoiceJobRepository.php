@@ -66,7 +66,7 @@ SET status = 'leased',
     updated_at = now()
 FROM candidate
 WHERE job.id = candidate.id
-RETURNING job.id, job.webhook_endpoint_id, job.account_id, job.lead_id, job.trigger_kind, job.payload_hash, job.status, job.locked_until, job.attempts, job.retry_at
+RETURNING job.id, job.webhook_endpoint_id, job.account_id, job.lead_id, job.trigger_kind, job.payload_hash, job.status, job.locked_until, job.attempts, job.retry_at, job.lease_owner, job.failure_reason
 SQL);
         $statement->execute([
             'now' => $now->format(DATE_ATOM),
@@ -85,7 +85,8 @@ SQL);
 UPDATE invoice_jobs
 SET status = 'completed', locked_until = NULL, lease_owner = NULL, updated_at = now()
 WHERE id = :id AND status = 'leased'
-SQL)->execute(['id' => $job->id]);
+  AND lease_owner = :lease_owner
+SQL)->execute(['id' => $job->id, 'lease_owner' => $job->leaseOwner]);
     }
 
     public function markRetryable(InvoiceJob $job, DateTimeImmutable $retryAt): void
@@ -94,7 +95,26 @@ SQL)->execute(['id' => $job->id]);
 UPDATE invoice_jobs
 SET status = 'retryable', retry_at = :retry_at, locked_until = NULL, lease_owner = NULL, updated_at = now()
 WHERE id = :id AND status = 'leased'
-SQL)->execute(['id' => $job->id, 'retry_at' => $retryAt->format(DATE_ATOM)]);
+  AND lease_owner = :lease_owner
+SQL)->execute([
+    'id' => $job->id,
+    'retry_at' => $retryAt->format(DATE_ATOM),
+    'lease_owner' => $job->leaseOwner,
+]);
+    }
+
+    public function markFailed(InvoiceJob $job, string $reason): void
+    {
+        $this->connection->prepare(<<<'SQL'
+UPDATE invoice_jobs
+SET status = 'failed', failure_reason = :failure_reason, locked_until = NULL, lease_owner = NULL, updated_at = now()
+WHERE id = :id AND status = 'leased'
+  AND lease_owner = :lease_owner
+SQL)->execute([
+    'id' => $job->id,
+    'failure_reason' => $reason,
+    'lease_owner' => $job->leaseOwner,
+]);
     }
 
     /** @param array<string, int|string|null> $row */
@@ -116,6 +136,8 @@ SQL)->execute(['id' => $job->id, 'retry_at' => $retryAt->format(DATE_ATOM)]);
             new DateTimeImmutable($lockedUntil),
             (int) $row['attempts'],
             $row['retry_at'] === null ? null : new DateTimeImmutable((string) $row['retry_at']),
+            $row['lease_owner'] === null ? null : (string) $row['lease_owner'],
+            $row['failure_reason'] === null ? null : (string) $row['failure_reason'],
         );
     }
 }

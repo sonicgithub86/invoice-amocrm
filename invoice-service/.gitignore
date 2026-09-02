@@ -1,5 +1,6 @@
 /.env
 /deploy/invoice-service.env
+/deploy/postgres.env
 /vendor/
 /.phpunit.cache/
 /.phpstan.cache/

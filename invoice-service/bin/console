@@ -5,14 +5,29 @@ declare(strict_types=1);
 
 use InvoiceService\Database\ConnectionFactory;
 use InvoiceService\Database\Migrator;
+use InvoiceService\AmoCRM\OAuthTokenRefresher;
+use InvoiceService\AmoCRM\OfficialOAuthGateway;
+use InvoiceService\AmoCRM\PdoAccountRepository;
+use InvoiceService\Security\CredentialCipher;
+
+$command = $argv[1] ?? '';
 
 $config = require dirname(__DIR__) . '/config/bootstrap.php';
 
-if (($argv[1] ?? '') === 'migrate') {
+if ($command === 'migrate') {
     (new Migrator(ConnectionFactory::fromConfig($config)))->migrate();
     fwrite(STDOUT, "Migrations complete.\n");
     exit(0);
 }
 
-fwrite(STDERR, "Usage: bin/console migrate\n");
+if ($command === 'refresh-oauth') {
+    $connection = ConnectionFactory::fromConfig($config);
+    $accounts = new PdoAccountRepository($connection, new CredentialCipher([1 => $config->credentialKey()]));
+    $gateway = new OfficialOAuthGateway($config->amoClientId(), $config->amoClientSecret(), $config->baseUrl() . '/oauth/callback');
+    $updated = (new OAuthTokenRefresher($accounts, $gateway))->refreshDue(new DateTimeImmutable('+5 minutes'));
+    fwrite(STDOUT, sprintf("Refreshed %d OAuth token(s).\n", count($updated)));
+    exit(0);
+}
+
+fwrite(STDERR, "Usage: bin/console migrate|refresh-oauth\n");
 exit(1);

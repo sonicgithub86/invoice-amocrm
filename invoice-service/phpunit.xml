@@ -3,6 +3,11 @@
   <testsuites>
     <testsuite name="Unit">
       <directory>tests/Domain</directory>
+      <directory>tests/AmoCRM</directory>
+      <directory>tests/Http</directory>
+      <directory>tests/OAuth</directory>
+      <directory>tests/Security</directory>
+      <directory>tests/Services</directory>
       <directory>tests/Support</directory>
     </testsuite>
     <testsuite name="Integration">

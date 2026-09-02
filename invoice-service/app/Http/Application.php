@@ -6,13 +6,24 @@ namespace InvoiceService\Http;
 
 final class Application
 {
-    /** @return array{status: int, body: array<string, string>} */
-    public function handle(string $method, string $path): array
+    public function __construct(private readonly ?OAuthController $oauth = null)
     {
-        if ($method === 'GET' && $path === '/healthz') {
-            return ['status' => 200, 'body' => ['status' => 'ok']];
+    }
+
+    public function handle(Request $request): Response
+    {
+        if ($request->method === 'GET' && $request->path === '/healthz') {
+            return Response::json(200, ['status' => 'ok']);
         }
 
-        return ['status' => 404, 'body' => ['error' => 'not_found']];
+        if ($this->oauth !== null && $request->method === 'GET' && $request->path === '/operator/oauth/start') {
+            return $this->oauth->start($request);
+        }
+
+        if ($this->oauth !== null && $request->method === 'GET' && $request->path === '/oauth/callback') {
+            return $this->oauth->callback($request);
+        }
+
+        return Response::json(404, ['error' => 'not_found']);
     }
 }

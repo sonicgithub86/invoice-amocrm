@@ -51,6 +51,11 @@ final class InvoiceOfferDocumentBuilderTest extends TestCase
             self::assertStringContainsString('ИП Сон Роман Валентинович', $documentXml);
             self::assertStringContainsString('910604143588', $documentXml);
             self::assertStringContainsString('Партнёрское соглашение № 28457194', $documentXml);
+            self::assertStringContainsString(
+                'Все неурегулированные споры подлежат рассмотрению Арбитражным судом г. Санкт-Петербург.',
+                $documentXml,
+            );
+            self::assertStringNotContainsString('Арбитражным судом г. Челябинска.', $documentXml);
             self::assertStringContainsString('ООО Покупатель', $documentXml);
             self::assertStringContainsString('Лицензия amoCRM Расширенный', $documentXml);
             self::assertStringNotContainsString('Настройка CRM', $documentXml);

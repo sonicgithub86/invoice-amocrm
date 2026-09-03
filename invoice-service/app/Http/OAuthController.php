@@ -33,6 +33,10 @@ final readonly class OAuthController
         $code = $request->query['code'] ?? '';
         $state = $request->query['state'] ?? '';
         $referer = $request->query['referer'] ?? '';
+        if ($code === '' && $state === '' && $referer === '') {
+            return Response::json(200, ['status' => 'oauth_callback_ready']);
+        }
+
         if ($code === '' || $state === '' || $referer === '') {
             return Response::json(400, ['error' => 'oauth_callback_parameters_invalid']);
         }

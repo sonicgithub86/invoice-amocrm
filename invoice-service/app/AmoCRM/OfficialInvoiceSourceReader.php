@@ -90,7 +90,7 @@ final readonly class OfficialInvoiceSourceReader implements InvoiceSourceReader
 
     private function wholeQuantity(int|float|null $quantity): ?int
     {
-        if ($quantity === null || $quantity < 1 || floor($quantity) !== $quantity || $quantity > PHP_INT_MAX) {
+        if ($quantity === null || $quantity < 1 || floor((float) $quantity) !== (float) $quantity || $quantity > PHP_INT_MAX) {
             return null;
         }
 

@@ -48,6 +48,24 @@ final class InvoiceRevisionRepositoryTest extends TestCase
         self::assertSame($second->id, $repository->currentId(7, 28457194));
     }
 
+    public function testChangedDocumentProfileCreatesOneReplacementRevision(): void
+    {
+        $repository = new InMemoryInvoiceRevisionRepository();
+        $versionOne = $this->complete($repository, $repository->reserve(7, $this->snapshot(1, 'sonic-ip-v1'))->revision);
+
+        $versionTwoReservation = $repository->reserve(7, $this->snapshot(1, 'sonic-ip-v2'));
+
+        self::assertTrue($versionTwoReservation->created);
+        self::assertSame('ЛЦ-АМ-28457194-000002', $versionTwoReservation->revision->invoiceNumber);
+        self::assertNotSame($versionOne->snapshotHash, $versionTwoReservation->revision->snapshotHash);
+
+        $versionTwo = $this->complete($repository, $versionTwoReservation->revision);
+        $repeat = $repository->reserve(7, $this->snapshot(1, 'sonic-ip-v2'));
+
+        self::assertFalse($repeat->created);
+        self::assertSame($versionTwo->id, $repeat->revision->id);
+    }
+
     public function testValidationBlockRemovesCurrentPointerWithoutDeletingHistory(): void
     {
         $repository = new InMemoryInvoiceRevisionRepository();
@@ -78,13 +96,13 @@ final class InvoiceRevisionRepositoryTest extends TestCase
         self::assertSame($current->id, $repository->currentId(7, 28457194));
     }
 
-    private function snapshot(int $quantity): InvoiceSnapshot
+    private function snapshot(int $quantity, ?string $profileVersion = null): InvoiceSnapshot
     {
         $profile = InvoiceOfferProfile::sonicIpV1();
         return InvoiceSnapshot::fromSource(new InvoiceSource(7, 28457194, new BuyerRequisites(
             'ООО Покупатель', '7701000000', '123456789', '1027700000000', 'г. Москва, ул. Пример, 1',
             '40702810000000000001', 'АО Банк', '30101810000000000001', '044525000',
-        ), [new DealProduct('Лицензия amoCRM', Money::fromDecimal('1990'), $quantity, true)], $profile->version), new InvoiceSourceValidator());
+        ), [new DealProduct('Лицензия amoCRM', Money::fromDecimal('1990'), $quantity, true)], $profileVersion ?? $profile->version), new InvoiceSourceValidator());
     }
 
     private function complete(InMemoryInvoiceRevisionRepository $repository, InvoiceRevision $revision): InvoiceRevision

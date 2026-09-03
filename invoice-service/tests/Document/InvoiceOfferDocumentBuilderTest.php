@@ -23,6 +23,7 @@ final class InvoiceOfferDocumentBuilderTest extends TestCase
     public function testBuildsOfferWithStaticSublicensorDataAndOnlyLicenceProducts(): void
     {
         $profile = InvoiceOfferProfile::sonicIpV1();
+        self::assertSame('sonic-ip-v2', $profile->version);
         $source = new InvoiceSource(1, 28457194, new BuyerRequisites(
             'ООО Покупатель', '7701000000', '123456789', '1027700000000', 'г. Москва, ул. Пример, 1',
             '40702810000000000001', 'АО Банк', '30101810000000000001', '044525000',

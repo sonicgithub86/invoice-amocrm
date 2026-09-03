@@ -25,7 +25,7 @@ final readonly class InvoiceOfferProfile
     public static function sonicIpV1(): self
     {
         return new self(
-            'sonic-ip-v1',
+            'sonic-ip-v2',
             'ИП Сон Роман Валентинович',
             '196084, Россия, г. Санкт-Петербург, Московский пр-кт, д. 73, корп. 5 литера А, кв. 516',
             '910604143588',

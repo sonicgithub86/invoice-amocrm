@@ -98,7 +98,7 @@ Stop at this point if readiness, render, backup, free disk, memory headroom, or 
 
 Prerequisites:
 
-- `invoices.sonic.expert` resolves publicly to `45.9.116.135`;
+- `invoice.sonic.expert` resolves publicly to `45.9.116.135`;
 - the closed stack and first backup pass;
 - the previous `/var/www/amo-integrator/docker/nginx/ssl.conf` is copied to a timestamped owner-only backup.
 
@@ -110,7 +110,7 @@ Issue the certificate with the existing Certbot webroot. Never stop Nginx for ce
 4. Replace the host bind-mounted file atomically.
 5. Run `docker exec amo-integrator-web-1 nginx -t`.
 6. Run `docker exec amo-integrator-web-1 nginx -s reload` only after the test passes.
-7. Run `PUBLIC_BASE_URL=https://invoices.sonic.expert ./scripts/verify-deploy.sh --public` and compare `develop.sonic.expert` with `BASELINE_FILE`.
+7. Run `PUBLIC_BASE_URL=https://invoice.sonic.expert ./scripts/verify-deploy.sh --public` and compare `develop.sonic.expert` with `BASELINE_FILE`.
 
 Never run `docker compose up`, `down`, or `restart` in `/var/www/amo-integrator` as part of this deployment.
 

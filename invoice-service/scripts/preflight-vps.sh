@@ -141,7 +141,7 @@ if [[ "$check_env_only" == true ]]; then
     exit 0
 fi
 
-for command in awk curl df docker findmnt stat uname; do
+for command in awk blockdev curl df docker findmnt stat uname; do
     command -v "$command" >/dev/null 2>&1 || fail "required command is unavailable: $command"
 done
 
@@ -157,7 +157,8 @@ docker compose version >/dev/null 2>&1 || fail 'Docker Compose plugin is unavail
 filesystem_type="$(findmnt -n -o FSTYPE /)"
 [[ "$filesystem_type" == ext4 ]] || fail "root filesystem must be ext4, found: $filesystem_type"
 
-disk_size_bytes="$(df -B1 --output=size / | awk 'NR == 2 {gsub(/[[:space:]]/, "", $1); print $1}')"
+filesystem_device="$(findmnt -n -o SOURCE /)"
+disk_size_bytes="$(blockdev --getsize64 "$filesystem_device")"
 disk_available_bytes="$(df -B1 --output=avail / | awk 'NR == 2 {gsub(/[[:space:]]/, "", $1); print $1}')"
 (( disk_size_bytes >= 30 * 1024 * 1024 * 1024 - 64 * 1024 * 1024 )) || fail 'root filesystem is smaller than the allocated 30 GiB disk'
 (( disk_available_bytes >= 8 * 1024 * 1024 * 1024 )) || fail 'root filesystem has less than 8 GiB available'

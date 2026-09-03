@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name invoices.sonic.expert;
+    server_name invoice.sonic.expert;
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -13,12 +13,12 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name invoices.sonic.expert;
+    server_name invoice.sonic.expert;
 
     client_max_body_size 64k;
 
-    ssl_certificate /etc/letsencrypt/live/invoices.sonic.expert/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/invoices.sonic.expert/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/invoice.sonic.expert/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/invoice.sonic.expert/privkey.pem;
     ssl_session_timeout 1d;
     ssl_session_cache shared:INVOICE_SSL:1m;
     ssl_protocols TLSv1.2 TLSv1.3;

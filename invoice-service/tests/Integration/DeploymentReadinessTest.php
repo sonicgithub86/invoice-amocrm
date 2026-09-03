@@ -108,6 +108,10 @@ final class DeploymentReadinessTest extends TestCase
         self::assertIsString($restoreDrill);
         self::assertStringContainsString('stable_ready_count', $restoreDrill);
         self::assertStringContainsString('SELECT 1', $restoreDrill);
+
+        $preflight = file_get_contents($root . '/scripts/preflight-vps.sh');
+        self::assertIsString($preflight);
+        self::assertStringContainsString('blockdev --getsize64 "$filesystem_device"', $preflight);
     }
 
     public function testReadinessCommandChecksDatabaseMigrationsStorageAndRendererBinaries(): void

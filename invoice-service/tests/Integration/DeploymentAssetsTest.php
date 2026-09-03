@@ -60,11 +60,11 @@ final class DeploymentAssetsTest extends TestCase
         $template = file_get_contents(dirname(__DIR__, 2) . '/deploy/nginx/invoice-service.conf.example');
         self::assertIsString($template);
 
-        self::assertStringContainsString('server_name invoices.sonic.expert;', $template);
+        self::assertStringContainsString('server_name invoice.sonic.expert;', $template);
         self::assertStringContainsString('resolver 127.0.0.11 valid=10s', $template);
         self::assertStringContainsString('set $invoice_upstream http://invoice-service-web:80;', $template);
         self::assertStringContainsString('proxy_pass $invoice_upstream;', $template);
-        self::assertStringContainsString('/etc/letsencrypt/live/invoices.sonic.expert/fullchain.pem', $template);
+        self::assertStringContainsString('/etc/letsencrypt/live/invoice.sonic.expert/fullchain.pem', $template);
         self::assertStringNotContainsString('127.0.0.1:18080', $template);
     }
 
